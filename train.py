@@ -4,6 +4,7 @@ from sklearn.ensemble import RandomForestRegressor
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+from evaluation import evaluate_regression, format_regression_metrics
 
 # Set random seed
 seed = 42
@@ -38,10 +39,19 @@ train_score = regr.score(X_train, y_train) * 100
 # Report test set score
 test_score = regr.score(X_test, y_test) * 100
 
+# Evaluate test set predictions
+y_test_pred = regr.predict(X_test)
+evaluation_metrics = evaluate_regression(y_test, y_test_pred)
+evaluation_report = format_regression_metrics(evaluation_metrics)
+
 # Write scores to a file
 with open("metrics.txt", "w") as outfile:
     outfile.write("Training variance explained: %2.1f%%\n" % train_score)
     outfile.write("Test variance explained: %2.1f%%\n" % test_score)
+    outfile.write(evaluation_report)
+
+print("Model evaluation")
+print(evaluation_report)
 
 ##########################################
 ##### PLOT FEATURE IMPORTANCE ############
@@ -110,7 +120,7 @@ plt.close()
 ##########################################
 
 rng = np.random.default_rng(seed)
-y_pred = regr.predict(X_test) + rng.normal(0, 0.25, len(y_test))
+y_pred = y_test_pred + rng.normal(0, 0.25, len(y_test))
 y_jitter = y_test + rng.normal(0, 0.25, len(y_test))
 
 res_df = pd.DataFrame(
