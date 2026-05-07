@@ -26,3 +26,28 @@ def format_regression_metrics(metrics):
         metrics["rmse"],
         metrics["r2"],
     )
+
+
+def summarize_evaluation(metrics, train_score, test_score):
+    """Return a short plain-English summary of model quality."""
+    summary = ["Evaluation summary:"]
+
+    if metrics["r2"] >= 0.7:
+        summary.append("- R2 is strong for this test split.")
+    elif metrics["r2"] >= 0.4:
+        summary.append("- R2 is moderate, so the model captures some signal.")
+    else:
+        summary.append("- R2 is low, so the model may need more tuning.")
+
+    if metrics["rmse"] <= 0.75:
+        summary.append("- RMSE is under one quality point, which is easy to interpret.")
+    else:
+        summary.append("- RMSE is above one quality point, so errors may be noticeable.")
+
+    score_gap = train_score - test_score
+    if score_gap <= 15:
+        summary.append("- Train and test scores are close, with no large overfitting signal.")
+    else:
+        summary.append("- Train score is much higher than test score; check for overfitting.")
+
+    return "\n".join(summary) + "\n"
