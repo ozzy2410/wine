@@ -4,6 +4,11 @@ from sklearn.ensemble import RandomForestRegressor
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+from evaluation import (
+    evaluate_regression,
+    format_regression_metrics,
+    summarize_evaluation,
+)
 
 # Set random seed
 seed = 42
@@ -38,10 +43,26 @@ train_score = regr.score(X_train, y_train) * 100
 # Report test set score
 test_score = regr.score(X_test, y_test) * 100
 
+# Evaluate test set predictions
+y_test_pred = regr.predict(X_test)
+evaluation_metrics = evaluate_regression(y_test, y_test_pred)
+evaluation_report = format_regression_metrics(evaluation_metrics)
+evaluation_summary = summarize_evaluation(
+    evaluation_metrics,
+    train_score,
+    test_score
+)
+
 # Write scores to a file
 with open("metrics.txt", "w") as outfile:
     outfile.write("Training variance explained: %2.1f%%\n" % train_score)
     outfile.write("Test variance explained: %2.1f%%\n" % test_score)
+    outfile.write(evaluation_report)
+    outfile.write(evaluation_summary)
+
+print("Model evaluation")
+print(evaluation_report)
+print(evaluation_summary)
 
 ##########################################
 ##### PLOT FEATURE IMPORTANCE ############
@@ -62,14 +83,24 @@ feature_df = feature_df.sort_values(
 )
 
 # Professional plot formatting
-sns.set_theme(style="whitegrid", context="talk")
+sns.set_theme(
+    style="whitegrid",
+    context="talk",
+    rc={
+        "axes.edgecolor": "#C9D1D9",
+        "axes.labelcolor": "#24292F",
+        "figure.facecolor": "white",
+    }
+)
 
-plt.figure(figsize=(10, 7))
+fig, ax = plt.subplots(figsize=(11, 7))
 
 ax = sns.barplot(
     x="importance",
     y="feature",
-    data=feature_df
+    data=feature_df,
+    color="#4C78A8",
+    ax=ax
 )
 
 ax.set_title(
@@ -81,10 +112,14 @@ ax.set_title(
 
 ax.set_xlabel("Importance Score", fontsize=16)
 ax.set_ylabel("Feature", fontsize=16)
+ax.tick_params(axis="both", labelsize=12)
+ax.grid(axis="x", linestyle="--", linewidth=0.8, alpha=0.45)
+ax.grid(axis="y", visible=False)
+ax.set_xlim(0, feature_df["importance"].max() * 1.15)
 
 # Add importance values at the end of each bar
 for container in ax.containers:
-    ax.bar_label(container, fmt="%.3f", padding=4, fontsize=10)
+    ax.bar_label(container, fmt="%.3f", padding=5, fontsize=10)
 
 sns.despine(left=True, bottom=True)
 plt.tight_layout()
@@ -95,15 +130,16 @@ plt.close()
 ############ PLOT RESIDUALS  #############
 ##########################################
 
-y_pred = regr.predict(X_test) + np.random.normal(0, 0.25, len(y_test))
-y_jitter = y_test + np.random.normal(0, 0.25, len(y_test))
+rng = np.random.default_rng(seed)
+y_pred = y_test_pred + rng.normal(0, 0.25, len(y_test))
+y_jitter = y_test + rng.normal(0, 0.25, len(y_test))
 
 res_df = pd.DataFrame(
     list(zip(y_jitter, y_pred)),
     columns=["true", "pred"]
 )
 
-plt.figure(figsize=(8, 8))
+fig, ax = plt.subplots(figsize=(8, 8))
 
 ax = sns.scatterplot(
     x="true",
@@ -112,7 +148,9 @@ ax = sns.scatterplot(
     alpha=0.75,
     s=70,
     edgecolor="white",
-    linewidth=0.5
+    linewidth=0.5,
+    color="#E45756",
+    ax=ax
 )
 
 ax.set_title(
@@ -124,6 +162,8 @@ ax.set_title(
 
 ax.set_xlabel("True Wine Quality", fontsize=16)
 ax.set_ylabel("Predicted Wine Quality", fontsize=16)
+ax.tick_params(axis="both", labelsize=12)
+ax.grid(True, linestyle="--", linewidth=0.8, alpha=0.45)
 
 # Ideal prediction line
 ax.plot(
@@ -131,16 +171,18 @@ ax.plot(
     [2.5, 8.5],
     linestyle="--",
     linewidth=2,
+    color="#2F3A4A",
     label="Perfect prediction"
 )
 
 ax.set_xlim(2.5, 8.5)
 ax.set_ylim(2.5, 8.5)
+ax.set_xticks(np.arange(3, 9, 1))
+ax.set_yticks(np.arange(3, 9, 1))
 ax.set_aspect("equal", adjustable="box")
-ax.legend(loc="upper left")
+ax.legend(loc="upper left", frameon=True)
 
 sns.despine()
 plt.tight_layout()
 plt.savefig("residuals.png", dpi=150, bbox_inches="tight")
 plt.close()
-
